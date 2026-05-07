@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Triangle Puzzle | GlobalInternet.py",
+    page_title="Triangle Memory Puzzle | GlobalInternet.py",
     page_icon="🔺",
     layout="wide"
 )
@@ -82,7 +82,7 @@ def login_page():
     <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
         <div class="login-card">
             <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
-            <div class="login-title">Triangle Match Puzzle</div>
+            <div class="login-title">Triangle Memory Puzzle</div>
             <p style="color:white;">Enter password to start the game</p>
     """, unsafe_allow_html=True)
     password = st.text_input("Password", type="password", key="login_pass")
@@ -98,7 +98,7 @@ def login_page():
 def show_sidebar():
     spinning_globe()
     st.sidebar.markdown("## **GlobalInternet.py**")
-    st.sidebar.markdown("### Triangle Match Puzzle")
+    st.sidebar.markdown("### Triangle Memory Puzzle")
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Built by Gesner Deslandes** – Coder in Chief")
     st.sidebar.markdown("📞 (509)-47385663")
@@ -117,7 +117,7 @@ def show_sidebar():
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
 
-# ---------- HTML/JS DRAG-AND-DROP MATCH GAME (20 triangles, specific squares) ----------
+# ---------- HTML/JS DRAG-AND-DROP MEMORY PUZZLE (20 triangles, hidden square IDs) ----------
 def drag_drop_game():
     game_html = """
     <!DOCTYPE html>
@@ -177,14 +177,6 @@ def drag_drop_game():
                 border-color: #4caf50;
                 box-shadow: 0 0 12px #4caf50;
             }
-            .square .square-label {
-                position: absolute;
-                top: 5px;
-                left: 8px;
-                font-size: 12px;
-                color: #ffd966;
-                font-weight: bold;
-            }
             .square .triangle-placed {
                 font-size: 40px;
                 cursor: default;
@@ -195,13 +187,19 @@ def drag_drop_game():
                 background: linear-gradient(135deg, #ff9a9e, #fad0c4);
                 border-radius: 15px;
                 display: flex;
+                flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                font-size: 45px;
+                font-size: 40px;
                 cursor: grab;
                 transition: all 0.2s;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                 margin: 0 auto;
+            }
+            .triangle span {
+                font-size: 12px;
+                font-weight: bold;
+                margin-top: 4px;
             }
             .triangle.dragging {
                 opacity: 0.5;
@@ -278,6 +276,7 @@ def drag_drop_game():
             @media (max-width: 700px) {
                 .square { width: 65px; height: 65px; }
                 .triangle { width: 65px; height: 65px; font-size: 35px; }
+                .triangle span { font-size: 10px; }
                 .triangle-placed { font-size: 35px; }
             }
         </style>
@@ -285,14 +284,14 @@ def drag_drop_game():
     <body>
     <div class="game-container">
         <div class="game-title">
-            <h2>🔺 Match Each Triangle to Its Correct Square 🔲</h2>
-            <p>Drag a triangle to the square with the same number. Wrong placement = error sound, no placement.</p>
+            <h2>🔺 Memory Puzzle – Hide & Match 🔲</h2>
+            <p>Each triangle has a number. Drag it to the square you <strong>think</strong> it matches. The squares have hidden IDs (1‑20). Wrong placement = error sound, correct = success and the triangle disappears. Remember where each number goes!</p>
         </div>
 
-        <!-- Squares (20 squares) -->
+        <!-- Squares (20 squares, no visible labels) -->
         <div id="squaresContainer" class="grid"></div>
 
-        <!-- Triangles (20 draggable) -->
+        <!-- Triangles (20 draggable, showing numbers) -->
         <div id="trianglesContainer" class="triangle-container"></div>
 
         <div class="info-panel">
@@ -301,10 +300,10 @@ def drag_drop_game():
         </div>
         <div id="winMessage" style="display: none;" class="win-message">🎉 YOU WIN! 🎉</div>
     </div>
-    <div id="errorToast" class="error-toast">❌ Wrong square! Try again.</div>
+    <div id="errorToast" class="error-toast">❌ Wrong square! Try another one.</div>
 
     <script>
-        // Audio context for sounds (success: high beep, error: low buzz)
+        // Audio context for sounds
         let audioCtx = null;
         function playSound(type) {
             if (!audioCtx) {
@@ -333,9 +332,8 @@ def drag_drop_game():
             }).catch(e => console.log("Audio error", e));
         }
 
-        // State: 20 squares, each matched to a triangle id (0-indexed)
-        let squareFilled = new Array(20).fill(false);   // true if correct triangle placed
-        let triangleUsed = new Array(20).fill(false);   // true if that triangle already placed
+        let squareFilled = new Array(20).fill(false);
+        let triangleUsed = new Array(20).fill(false);
         let remaining = 20;
 
         const squaresContainer = document.getElementById('squaresContainer');
@@ -356,8 +354,6 @@ def drag_drop_game():
         function checkWin() {
             if (remaining === 0) {
                 winDiv.style.display = 'block';
-                // Trigger balloons via Streamlit? We'll use JS balloons (canvas or simply alert)
-                // For simplicity, we'll create floating balloons using canvas.
                 createBalloons();
             }
         }
@@ -398,41 +394,35 @@ def drag_drop_game():
             setTimeout(() => { balloonDiv.remove(); }, 7000);
         }
 
-        // Build squares
+        // Create squares (no visible label, only a visual placeholder)
         for (let i = 0; i < 20; i++) {
             const square = document.createElement('div');
             square.className = 'square';
-            if (squareFilled[i]) square.classList.add('correct');
             square.setAttribute('data-square-id', i);
-            square.innerHTML = `<div class="square-label">${i+1}</div><div class="triangle-placed">${squareFilled[i] ? '🔺' : ''}</div>`;
+            square.innerHTML = `<div class="triangle-placed"></div>`;
             square.addEventListener('dragover', (e) => {
                 e.preventDefault();
             });
             square.addEventListener('drop', (e) => {
                 e.preventDefault();
                 const squareId = parseInt(e.currentTarget.getAttribute('data-square-id'));
-                if (squareFilled[squareId]) return; // already filled
+                if (squareFilled[squareId]) return;
                 const triangleId = e.dataTransfer.getData('text/plain');
                 if (triangleId === null) return;
                 const tid = parseInt(triangleId);
-                if (triangleUsed[tid]) return; // already placed (should not happen)
-                // Check if triangle matches square (triangle number == square number)
+                if (triangleUsed[tid]) return;
                 if (tid === squareId) {
-                    // Correct match
                     playSound('success');
                     squareFilled[squareId] = true;
                     triangleUsed[tid] = true;
                     remaining--;
                     updateRemaining();
-                    // Update square appearance
                     e.currentTarget.classList.add('correct');
                     e.currentTarget.querySelector('.triangle-placed').innerHTML = '🔺';
-                    // Remove triangle from draggable area
                     const triangleElem = document.getElementById(`triangle-${tid}`);
                     if (triangleElem) triangleElem.remove();
                     checkWin();
                 } else {
-                    // Wrong match
                     playSound('error');
                     showErrorToast();
                 }
@@ -440,14 +430,14 @@ def drag_drop_game():
             squaresContainer.appendChild(square);
         }
 
-        // Build triangles
+        // Create triangles with visible numbers
         for (let i = 0; i < 20; i++) {
             const triangle = document.createElement('div');
             triangle.id = `triangle-${i}`;
             triangle.className = 'triangle';
             triangle.setAttribute('draggable', 'true');
             triangle.setAttribute('data-triangle-id', i);
-            triangle.innerHTML = `🔺<span style="font-size:12px; display:block;">${i+1}</span>`;
+            triangle.innerHTML = `🔺<span>${i+1}</span>`;
             triangle.addEventListener('dragstart', (e) => {
                 if (triangleUsed[i]) {
                     e.preventDefault();
@@ -464,20 +454,17 @@ def drag_drop_game():
         }
 
         function resetGame() {
-            // Reset arrays
             squareFilled.fill(false);
             triangleUsed.fill(false);
             remaining = 20;
             updateRemaining();
             winDiv.style.display = 'none';
-            // Clear squares and rebuild content
             const squares = document.querySelectorAll('.square');
-            squares.forEach((square, idx) => {
+            squares.forEach((square) => {
                 square.classList.remove('correct');
                 const placedDiv = square.querySelector('.triangle-placed');
                 placedDiv.innerHTML = '';
             });
-            // Rebuild triangles container
             trianglesContainer.innerHTML = '';
             for (let i = 0; i < 20; i++) {
                 const triangle = document.createElement('div');
@@ -485,7 +472,7 @@ def drag_drop_game():
                 triangle.className = 'triangle';
                 triangle.setAttribute('draggable', 'true');
                 triangle.setAttribute('data-triangle-id', i);
-                triangle.innerHTML = `🔺<span style="font-size:12px; display:block;">${i+1}</span>`;
+                triangle.innerHTML = `🔺<span>${i+1}</span>`;
                 triangle.addEventListener('dragstart', (e) => {
                     if (triangleUsed[i]) {
                         e.preventDefault();
@@ -513,8 +500,8 @@ def drag_drop_game():
 # ---------- MAIN APP AFTER LOGIN ----------
 def main_app():
     show_sidebar()
-    st.markdown("<h1 style='text-align:center;'>🔺 Match the Triangle to Its Square 🔲</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>Each triangle has a number. Drag it to the square with the same number. Wrong placement = error sound, correct = success sound and the triangle disappears. Fit all 20 to win!</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;'>🔺 Hidden Match Memory Puzzle 🔲</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>The squares have hidden numbers (1‑20). Drag each triangle (which shows its number) onto the square you believe is its match. Wrong placement = error sound; correct = success and the triangle disappears. Remember where each number belongs! Fit all 20 to win.</p>", unsafe_allow_html=True)
     drag_drop_game()
     st.markdown('<div class="footer">© GlobalInternet.py – Train your brain, one puzzle at a time.</div>', unsafe_allow_html=True)
 
