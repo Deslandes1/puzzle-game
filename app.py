@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- CUSTOM CSS (colorful, beautiful) ----------
+# ---------- CUSTOM CSS ----------
 st.markdown("""
 <style>
     .stApp {
@@ -40,34 +40,24 @@ st.markdown("""
         backdrop-filter: blur(10px);
         border-radius: 20px;
         padding: 1rem;
-        margin: 0.5rem;
         text-align: center;
         border: 2px solid #ffd966;
+        margin-bottom: 1rem;
         min-height: 180px;
-        transition: 0.2s;
-    }
-    .game-square:hover {
-        border-color: #e94560;
-        transform: scale(1.02);
     }
     .triangle-card {
         background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
         border-radius: 15px;
-        padding: 1rem;
-        margin: 0.5rem;
+        padding: 0.8rem;
+        margin: 0.5rem 0;
         text-align: center;
         font-weight: bold;
-        cursor: pointer;
         transition: 0.2s;
-        border: 1px solid #fff;
     }
-    .triangle-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-    .triangle-placed {
-        background: #2e7d32;
-        opacity: 0.7;
+    .triangle-selected {
+        background: #e94560 !important;
+        color: white;
+        transform: scale(1.02);
     }
     .win-message {
         text-align: center;
@@ -80,15 +70,6 @@ st.markdown("""
         0% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.05); opacity: 0.8; }
         100% { transform: scale(1); opacity: 1; }
-    }
-    .square-title {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #ffd966;
-    }
-    .triangle-list {
-        font-size: 1.1rem;
-        margin-top: 0.5rem;
     }
     h1, h2, h3 {
         color: #ffd966 !important;
@@ -113,7 +94,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- SPINNING GLOBE ANIMATION (used later) ----------
+# ---------- SPINNING GLOBE ----------
 def spinning_globe():
     st.sidebar.markdown("""
     <div style="text-align: center;">
@@ -128,7 +109,6 @@ def spinning_globe():
 if "game_authenticated" not in st.session_state:
     st.session_state.game_authenticated = False
 if "game_state" not in st.session_state:
-    # triangles: each is {id, placed, square_index}
     st.session_state.game_state = {
         "triangles": [{"id": i, "placed": False, "square": None} for i in range(6)],
         "selected_triangle": None,
@@ -202,41 +182,42 @@ def game_main():
     if st.sidebar.button("🔓 Logout", width="stretch"):
         logout()
 
-    # Main game area
+    # Main content
     st.markdown("<h1 style='text-align:center;'>🔺 Six Triangles → Four Squares 🔲</h1>", unsafe_allow_html=True)
     st.markdown("""
     <div class="inspiration">
-    Puzzles teach us not to give up easily. <br>
+    Puzzles teach us not to give up easily.<br>
     They push us to try again, think differently, and come up with new ideas to solve problems.<br>
     Every puzzle is like a small workout for the brain – helping our mind grow sharper, more creative, and more patient with challenges.
     </div>
     """, unsafe_allow_html=True)
 
-    col_left, col_right = st.columns([2, 1])
+    # Layout: squares on left, triangles on right
+    col_squares, col_triangles = st.columns([2, 1])
 
-    with col_left:
-        st.markdown("### 🟦 Squares (Click a square to place the selected triangle)")
-        squares = st.columns(2)
-        square_index = 0
+    # ----- SQUARES (2x2 grid) -----
+    with col_squares:
+        st.markdown("### 🟦 Squares (click button to place selected triangle)")
+        # Create 2 rows of 2 squares each
         for row in range(2):
-            cols = st.columns(2)
-            for col in cols:
-                with col:
-                    triangles_in_square = [t for t in st.session_state.game_state["triangles"] if t["square"] == square_index]
-                    placed_count = len(triangles_in_square)
+            row_cols = st.columns(2)
+            for col_idx in range(2):
+                square_index = row * 2 + col_idx
+                # Count triangles already placed in this square
+                triangles_in_square = [t for t in st.session_state.game_state["triangles"] if t["square"] == square_index]
+                placed_count = len(triangles_in_square)
+                with row_cols[col_idx]:
                     st.markdown(f"""
-                    <div class="game-square" id="square_{square_index}">
-                        <div class="square-title">Square {square_index+1}</div>
-                        <div class="triangle-list">
-                            {''.join([f'🔺 ' for _ in range(placed_count)]) or '⚪ empty'}
-                        </div>
-                        <p style="font-size:0.8rem;">({placed_count}/6 triangles)</p>
+                    <div class="game-square">
+                        <h3>Square {square_index+1}</h3>
+                        <div style="font-size:1.5rem;">🔲</div>
+                        <div>{'🔺 ' * placed_count}</div>
+                        <div>({placed_count}/6 triangles)</div>
                     </div>
                     """, unsafe_allow_html=True)
-                    if st.button(f"Place here → Square {square_index+1}", key=f"place_{square_index}", width="stretch"):
+                    if st.button(f"Place here → Square {square_index+1}", key=f"place_{square_index}"):
                         if st.session_state.game_state["selected_triangle"] is not None:
                             tri_id = st.session_state.game_state["selected_triangle"]
-                            # find that triangle
                             for t in st.session_state.game_state["triangles"]:
                                 if t["id"] == tri_id and not t["placed"]:
                                     t["placed"] = True
@@ -244,49 +225,37 @@ def game_main():
                                     st.session_state.game_state["selected_triangle"] = None
                                     break
                             # check win
-                            all_placed = all(t["placed"] for t in st.session_state.game_state["triangles"])
-                            if all_placed:
+                            if all(t["placed"] for t in st.session_state.game_state["triangles"]):
                                 st.session_state.game_state["win"] = True
                             st.rerun()
                         else:
                             st.warning("First select a triangle from the right panel!")
-                    square_index += 1
 
-    with col_right:
+    # ----- TRIANGLES -----
+    with col_triangles:
         st.markdown("### 🔺 Available Triangles")
         st.markdown("*Click a triangle to select it, then click a square.*")
-        # Display triangles that are not placed
         unplaced = [t for t in st.session_state.game_state["triangles"] if not t["placed"]]
         if unplaced:
-            cols_tri = st.columns(2)
-            for idx, tri in enumerate(unplaced):
-                with cols_tri[idx % 2]:
-                    is_selected = (st.session_state.game_state["selected_triangle"] == tri["id"])
-                    bg_color = "#e94560" if is_selected else "#ff9a9e"
-                    st.markdown(f"""
-                    <div style="background:{bg_color}; border-radius:15px; padding:0.8rem; margin:0.5rem; text-align:center; cursor:pointer;">
-                        <div style="font-size:2rem;">🔺</div>
-                        <div>Triangle {tri['id']+1}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    if st.button(f"Select 🔺 {tri['id']+1}", key=f"select_{tri['id']}"):
-                        st.session_state.game_state["selected_triangle"] = tri["id"]
-                        st.rerun()
+            for tri in unplaced:
+                is_selected = (st.session_state.game_state["selected_triangle"] == tri["id"])
+                label = f"🔺 Triangle {tri['id']+1}"
+                if st.button(label, key=f"tri_{tri['id']}"):
+                    st.session_state.game_state["selected_triangle"] = tri["id"]
+                    st.rerun()
+                if is_selected:
+                    st.markdown(f"<p style='color:#e94560; font-weight:bold;'>✓ Selected: Triangle {tri['id']+1}</p>", unsafe_allow_html=True)
         else:
-            st.success("🎉 All triangles are placed! You win!")
+            st.success("🎉 All triangles placed! You win!")
 
         if st.button("⟳ Reset Game", width="stretch"):
             reset_game()
 
-    # Win detection and celebration
+    # Win celebration
     if st.session_state.game_state["win"]:
         st.markdown('<div class="win-message">🎉 YOU WIN! 🎉</div>', unsafe_allow_html=True)
         st.balloons()
-        st.snow()  # just for fun
-
-    # Show selected triangle info
-    if st.session_state.game_state["selected_triangle"] is not None:
-        st.info(f"Selected: Triangle {st.session_state.game_state['selected_triangle']+1}. Now click on a square to place it.")
+        st.snow()
 
     st.markdown("---")
     st.caption("© GlobalInternet.py – Train your brain, one puzzle at a time.")
