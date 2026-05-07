@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Triangle Puzzle | GlobalInternet.py",
@@ -6,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- CUSTOM CSS ----------
+# ---------- CUSTOM CSS for overall app (sidebar, login, etc.) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -33,66 +34,31 @@ st.markdown("""
         background-color: #ff6b6b !important;
         transform: scale(1.02);
     }
-    .game-square {
-        background: rgba(255,255,255,0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        padding: 1rem;
+    .login-card {
+        background: rgba(15,52,96,0.8);
+        backdrop-filter: blur(12px);
+        border-radius: 30px;
+        padding: 2rem;
         text-align: center;
-        border: 2px solid #ffd966;
-        margin-bottom: 1rem;
-        min-height: 180px;
+        border: 1px solid #e94560;
+        width: 100%;
+        max-width: 450px;
+        margin: auto;
     }
-    .triangle-card {
-        background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
-        border-radius: 15px;
-        padding: 0.8rem;
-        margin: 0.5rem 0;
-        text-align: center;
-        font-weight: bold;
-        transition: 0.2s;
-    }
-    .triangle-selected {
-        background: #e94560 !important;
-        color: white;
-        transform: scale(1.02);
-    }
-    .win-message {
-        text-align: center;
-        font-size: 2rem;
-        font-weight: bold;
-        color: #ffd966;
-        animation: pulse 0.8s infinite;
-    }
-    @keyframes pulse {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.05); opacity: 0.8; }
-        100% { transform: scale(1); opacity: 1; }
-    }
+    .login-title { color: #ffd966; font-size: 2rem; margin-bottom: 1rem; }
     h1, h2, h3 {
         color: #ffd966 !important;
     }
-    p, li {
-        color: #ffffff !important;
-    }
     .footer {
         text-align: center;
-        margin-top: 3rem;
+        margin-top: 2rem;
         padding: 1rem;
         border-top: 1px solid #e94560;
-    }
-    .inspiration {
-        background: rgba(233,69,96,0.2);
-        border-left: 5px solid #e94560;
-        padding: 0.5rem 1rem;
-        border-radius: 12px;
-        margin: 1rem 0;
-        font-style: italic;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- SPINNING GLOBE ----------
+# ---------- SPINNING GLOBE SIDEBAR FUNCTION ----------
 def spinning_globe():
     st.sidebar.markdown("""
     <div style="text-align: center;">
@@ -106,41 +72,14 @@ def spinning_globe():
 # ---------- LOGIN / LOGOUT ----------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
-if "triangles" not in st.session_state:
-    # Each triangle: {id, placed, square_index}
-    st.session_state.triangles = [{"id": i, "placed": False, "square": None} for i in range(6)]
-if "selected_triangle" not in st.session_state:
-    st.session_state.selected_triangle = None
 
 def logout():
     st.session_state.authenticated = False
-    st.session_state.triangles = [{"id": i, "placed": False, "square": None} for i in range(6)]
-    st.session_state.selected_triangle = None
-    st.rerun()
-
-def reset_game():
-    st.session_state.triangles = [{"id": i, "placed": False, "square": None} for i in range(6)]
-    st.session_state.selected_triangle = None
     st.rerun()
 
 def login_page():
     st.markdown("""
-    <style>
-    .login-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
-    .login-card {
-        background: rgba(15,52,96,0.8);
-        backdrop-filter: blur(12px);
-        border-radius: 30px;
-        padding: 2rem;
-        text-align: center;
-        border: 1px solid #e94560;
-        width: 100%;
-        max-width: 450px;
-        margin: auto;
-    }
-    .login-title { color: #ffd966; font-size: 2rem; margin-bottom: 1rem; }
-    </style>
-    <div class="login-container">
+    <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
         <div class="login-card">
             <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
             <div class="login-title">Triangle Puzzle</div>
@@ -155,8 +94,8 @@ def login_page():
             st.error("Incorrect password.")
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-# ---------- MAIN GAME UI ----------
-def game_main():
+# ---------- SIDEBAR (visible only after login) ----------
+def show_sidebar():
     spinning_globe()
     st.sidebar.markdown("## **GlobalInternet.py**")
     st.sidebar.markdown("### Triangle Puzzle")
@@ -178,87 +117,307 @@ def game_main():
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
 
-    # Main content
-    st.markdown("<h1 style='text-align:center;'>🔺 Six Triangles → Four Squares 🔲</h1>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class="inspiration">
-    Puzzles teach us not to give up easily.<br>
-    They push us to try again, think differently, and come up with new ideas to solve problems.<br>
-    Every puzzle is like a small workout for the brain – helping our mind grow sharper, more creative, and more patient with challenges.
+# ---------- HTML/JS DRAG-AND-DROP GAME ----------
+def drag_drop_game():
+    game_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <style>
+            * {
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+            body {
+                background: transparent;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                padding: 1rem;
+            }
+            .game-container {
+                background: rgba(0,0,0,0.3);
+                border-radius: 30px;
+                padding: 1.5rem;
+            }
+            .game-title {
+                text-align: center;
+                margin-bottom: 1.5rem;
+            }
+            .game-title h2 {
+                color: #ffd966;
+                margin: 0;
+            }
+            .game-title p {
+                color: #ddd;
+                font-size: 1rem;
+            }
+            .grid {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 20px;
+                margin: 20px 0;
+            }
+            .square {
+                width: 100px;
+                height: 100px;
+                background: rgba(255, 217, 102, 0.2);
+                border: 3px solid #ffd966;
+                border-radius: 15px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+                position: relative;
+            }
+            .square.filled {
+                background: rgba(46, 125, 50, 0.6);
+                border-color: #4caf50;
+                box-shadow: 0 0 12px #4caf50;
+            }
+            .square .square-label {
+                position: absolute;
+                top: 5px;
+                left: 8px;
+                font-size: 12px;
+                color: #ffd966;
+                font-weight: bold;
+            }
+            .square .triangle-placed {
+                font-size: 50px;
+                cursor: default;
+            }
+            .square.empty .triangle-placed {
+                display: none;
+            }
+            .triangle {
+                width: 80px;
+                height: 80px;
+                background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+                border-radius: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 45px;
+                cursor: grab;
+                transition: all 0.2s;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                margin: 0 auto;
+            }
+            .triangle.dragging {
+                opacity: 0.5;
+                cursor: grabbing;
+            }
+            .triangle:hover {
+                transform: scale(1.05);
+                background: #ff6b6b;
+            }
+            .triangle-container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 20px;
+                margin: 20px 0;
+            }
+            .info-panel {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 20px;
+                background: rgba(0,0,0,0.5);
+                padding: 10px 20px;
+                border-radius: 40px;
+            }
+            .remaining {
+                color: white;
+                font-weight: bold;
+            }
+            .reset-btn {
+                background-color: #e94560;
+                color: white;
+                border: none;
+                border-radius: 40px;
+                padding: 8px 24px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: 0.2s;
+            }
+            .reset-btn:hover {
+                background-color: #ff6b6b;
+                transform: scale(1.02);
+            }
+            .win-message {
+                text-align: center;
+                font-size: 2rem;
+                font-weight: bold;
+                color: #ffd966;
+                animation: pulse 0.8s infinite;
+                margin-top: 20px;
+            }
+            @keyframes pulse {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.05); opacity: 0.8; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            @media (max-width: 700px) {
+                .square { width: 70px; height: 70px; }
+                .triangle { width: 60px; height: 60px; font-size: 35px; }
+                .triangle-placed { font-size: 35px; }
+            }
+        </style>
+    </head>
+    <body>
+    <div class="game-container">
+        <div class="game-title">
+            <h2>🔺 Drag each triangle into a square 🔲</h2>
+            <p>Drop a triangle onto a square – it will stick. Each square fits exactly one triangle.</p>
+        </div>
+
+        <!-- Squares (10 positions) -->
+        <div id="squaresContainer" class="grid"></div>
+
+        <!-- Triangles (10 draggable) -->
+        <div id="trianglesContainer" class="triangle-container"></div>
+
+        <div class="info-panel">
+            <span class="remaining">🔺 Remaining triangles: <span id="remainingCount">10</span></span>
+            <button class="reset-btn" id="resetBtn">⟳ Reset Game</button>
+        </div>
+        <div id="winMessage" style="display: none;" class="win-message">🎉 YOU WIN! 🎉</div>
     </div>
-    """, unsafe_allow_html=True)
 
-    # Stats
-    remaining = sum(1 for t in st.session_state.triangles if not t["placed"])
-    st.info(f"📊 **Remaining triangles:** {remaining} of 6. Place them into any square (multiple per square).")
+    <script>
+        // Configuration: 10 triangles, 10 squares (indexed 0-9)
+        let squaresOccupied = new Array(10).fill(false);  // true if a triangle is placed
+        let trianglePlaced = new Array(10).fill(false);   // which triangle ID is placed, but we track by draggable elements
+        let dragSrcElement = null;
 
-    # Layout: squares on left, triangles on right
-    col_squares, col_triangles = st.columns([2, 1])
+        // Create squares
+        const squaresContainer = document.getElementById('squaresContainer');
+        for (let i = 0; i < 10; i++) {
+            const square = document.createElement('div');
+            square.className = 'square empty';
+            square.setAttribute('data-square-id', i);
+            square.innerHTML = `<div class="square-label">S${i+1}</div><div class="triangle-placed"></div>`;
+            square.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            square.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const squareId = parseInt(e.currentTarget.getAttribute('data-square-id'));
+                if (squaresOccupied[squareId]) return; // already filled
+                const triangleId = e.dataTransfer.getData('text/plain');
+                if (triangleId === null) return;
+                const triangleElement = document.getElementById(`triangle-${triangleId}`);
+                if (triangleElement && triangleElement.parentNode) {
+                    // Remove triangle from its container
+                    triangleElement.remove();
+                    // Mark square as filled
+                    squaresOccupied[squareId] = true;
+                    // Update square display
+                    e.currentTarget.classList.remove('empty');
+                    e.currentTarget.classList.add('filled');
+                    const placedDiv = e.currentTarget.querySelector('.triangle-placed');
+                    placedDiv.innerHTML = '🔺';
+                    // Update remaining count
+                    updateRemaining();
+                    // Check win
+                    if (squaresOccupied.every(v => v === true)) {
+                        document.getElementById('winMessage').style.display = 'block';
+                        // optional: disable further drops
+                        alert('Congratulations! You placed all triangles!');
+                    }
+                }
+            });
+            squaresContainer.appendChild(square);
+        }
 
-    # ----- SQUARES (2x2 grid) -----
-    with col_squares:
-        st.markdown("### 🟦 Squares (click button to place selected triangle)")
-        # Create 2 rows of 2 squares each
-        for row in range(2):
-            row_cols = st.columns(2)
-            for col_idx in range(2):
-                square_index = row * 2 + col_idx
-                # Count triangles already placed in this square
-                triangles_in_square = [t for t in st.session_state.triangles if t["placed"] and t["square"] == square_index]
-                placed_count = len(triangles_in_square)
-                with row_cols[col_idx]:
-                    st.markdown(f"""
-                    <div class="game-square">
-                        <h3>Square {square_index+1}</h3>
-                        <div style="font-size:2rem;">🔲</div>
-                        <div>{'🔺 ' * placed_count}</div>
-                        <div>({placed_count}/6 triangles)</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    if st.button(f"Place here → Square {square_index+1}", key=f"place_{square_index}"):
-                        if st.session_state.selected_triangle is not None:
-                            tri_id = st.session_state.selected_triangle
-                            # Find the triangle
-                            for t in st.session_state.triangles:
-                                if t["id"] == tri_id and not t["placed"]:
-                                    t["placed"] = True
-                                    t["square"] = square_index
-                                    st.session_state.selected_triangle = None
-                                    break
-                            st.rerun()
-                        else:
-                            st.warning("First select a triangle from the right panel!")
+        // Create triangles
+        const trianglesContainer = document.getElementById('trianglesContainer');
+        for (let i = 0; i < 10; i++) {
+            const triangle = document.createElement('div');
+            triangle.id = `triangle-${i}`;
+            triangle.className = 'triangle';
+            triangle.setAttribute('draggable', 'true');
+            triangle.setAttribute('data-triangle-id', i);
+            triangle.innerHTML = '🔺';
+            triangle.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', e.target.getAttribute('data-triangle-id'));
+                e.dataTransfer.effectAllowed = 'move';
+                e.target.classList.add('dragging');
+            });
+            triangle.addEventListener('dragend', (e) => {
+                e.target.classList.remove('dragging');
+            });
+            // For touch devices: we need to handle touch events (simpler: use HTML5 drag and drop works on most desktops, but touch requires additional handling)
+            // We'll add a fallback: on touch, use a simple "tap" + "tap square" mechanism? But for simplicity, we rely on drag/drop.
+            // However, modern touch devices support drag/drop partially. To ensure full mobile, we add a touch polyfill using simple button mode? Not needed for now.
+            trianglesContainer.appendChild(triangle);
+        }
 
-    # ----- TRIANGLES -----
-    with col_triangles:
-        st.markdown("### 🔺 Available Triangles")
-        st.markdown("*Click a triangle to select it, then click a square.*")
-        unplaced = [t for t in st.session_state.triangles if not t["placed"]]
-        if unplaced:
-            for tri in unplaced:
-                is_selected = (st.session_state.selected_triangle == tri["id"])
-                if st.button(f"🔺 Triangle {tri['id']+1}", key=f"tri_{tri['id']}"):
-                    st.session_state.selected_triangle = tri["id"]
-                    st.rerun()
-                if is_selected:
-                    st.markdown(f"<p style='color:#e94560; font-weight:bold;'>✓ Selected</p>", unsafe_allow_html=True)
-        else:
-            st.success("🎉 All triangles placed! You win!")
+        function updateRemaining() {
+            const remaining = squaresOccupied.filter(v => !v).length;
+            document.getElementById('remainingCount').innerText = remaining;
+        }
 
-        if st.button("⟳ Reset Game", use_container_width=True):
-            reset_game()
+        // Reset function
+        function resetGame() {
+            // Reset arrays
+            squaresOccupied.fill(false);
+            // Clear squares and rebuild content
+            const squares = document.querySelectorAll('.square');
+            squares.forEach((square, idx) => {
+                square.classList.remove('filled');
+                square.classList.add('empty');
+                const placedDiv = square.querySelector('.triangle-placed');
+                placedDiv.innerHTML = '';
+                // Reset data attribute? no need.
+            });
+            // Rebuild triangles container (remove all and recreate)
+            trianglesContainer.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const triangle = document.createElement('div');
+                triangle.id = `triangle-${i}`;
+                triangle.className = 'triangle';
+                triangle.setAttribute('draggable', 'true');
+                triangle.setAttribute('data-triangle-id', i);
+                triangle.innerHTML = '🔺';
+                triangle.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-triangle-id'));
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.target.classList.add('dragging');
+                });
+                triangle.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('dragging');
+                });
+                trianglesContainer.appendChild(triangle);
+            }
+            document.getElementById('winMessage').style.display = 'none';
+            updateRemaining();
+        }
 
-    # Win celebration
-    if all(t["placed"] for t in st.session_state.triangles):
-        st.markdown('<div class="win-message">🎉 YOU WIN! 🎉</div>', unsafe_allow_html=True)
-        st.balloons()
-        st.snow()
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        updateRemaining();
+    </script>
+    </body>
+    </html>
+    """
+    components.html(game_html, height=700, scrolling=False)
 
-    st.markdown("---")
-    st.caption("© GlobalInternet.py – Train your brain, one puzzle at a time.")
+# ---------- MAIN APP AFTER LOGIN ----------
+def main_app():
+    show_sidebar()
+    st.markdown("<h1 style='text-align:center;'>🔺 Drag & Drop Puzzle</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>Drag each triangle into a square – each square can hold exactly one triangle.</p>", unsafe_allow_html=True)
+    drag_drop_game()
+    st.markdown('<div class="footer">© GlobalInternet.py – Train your brain, one puzzle at a time.</div>', unsafe_allow_html=True)
 
 # ---------- ROUTING ----------
 if not st.session_state.authenticated:
     login_page()
 else:
-    game_main()
+    main_app()
