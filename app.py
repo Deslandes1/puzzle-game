@@ -117,7 +117,7 @@ def show_sidebar():
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
 
-# ---------- HTML/JS DRAG-AND-DROP MEMORY PUZZLE (20 triangles, hidden square IDs) ----------
+# ---------- HTML/JS DRAG-AND-DROP MEMORY PUZZLE (shuffled hidden numbers) ----------
 def drag_drop_game():
     game_html = """
     <!DOCTYPE html>
@@ -284,11 +284,11 @@ def drag_drop_game():
     <body>
     <div class="game-container">
         <div class="game-title">
-            <h2>🔺 Memory Puzzle – Hide & Match 🔲</h2>
-            <p>Each triangle has a number. Drag it to the square you <strong>think</strong> it matches. The squares have hidden IDs (1‑20). Wrong placement = error sound, correct = success and the triangle disappears. Remember where each number goes!</p>
+            <h2>🔺 Shuffled Memory Puzzle 🔲</h2>
+            <p>Each square hides a random number (1‑20). Drag the triangle to the square you believe contains its matching number. Wrong = error sound, correct = success and the triangle stays. Remember positions! All numbers are shuffled each game.</p>
         </div>
 
-        <!-- Squares (20 squares, no visible labels) -->
+        <!-- Squares (20 squares, no visible numbers) -->
         <div id="squaresContainer" class="grid"></div>
 
         <!-- Triangles (20 draggable, showing numbers) -->
@@ -296,14 +296,13 @@ def drag_drop_game():
 
         <div class="info-panel">
             <span class="remaining">🔺 Remaining triangles: <span id="remainingCount">20</span></span>
-            <button class="reset-btn" id="resetBtn">⟳ Reset Game</button>
+            <button class="reset-btn" id="resetBtn">⟳ Reset Game (reshuffle hidden numbers)</button>
         </div>
         <div id="winMessage" style="display: none;" class="win-message">🎉 YOU WIN! 🎉</div>
     </div>
-    <div id="errorToast" class="error-toast">❌ Wrong square! Try another one.</div>
+    <div id="errorToast" class="error-toast">❌ Wrong square! Try again.</div>
 
     <script>
-        // Audio context for sounds
         let audioCtx = null;
         function playSound(type) {
             if (!audioCtx) {
@@ -321,17 +320,28 @@ def drag_drop_game():
                     gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.8);
                     oscillator.start();
                     oscillator.stop(audioCtx.currentTime + 0.8);
-                } else {
+                } else if (type === 'error') {
                     oscillator.frequency.value = 220;
                     gain.gain.value = 0.2;
                     oscillator.type = 'square';
                     gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
                     oscillator.start();
                     oscillator.stop(audioCtx.currentTime + 0.5);
+                } else if (type === 'win') {
+                    // Victory chime: two notes
+                    oscillator.frequency.value = 1046.5; // C6
+                    gain.gain.value = 0.3;
+                    oscillator.type = 'sine';
+                    gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1.2);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 1.2);
+                    // add a second oscillator for harmony? simple beep for now.
                 }
             }).catch(e => console.log("Audio error", e));
         }
 
+        // State variables
+        let squareHiddenNumbers = []; // length 20, each value 0-19 (triangle id)
         let squareFilled = new Array(20).fill(false);
         let triangleUsed = new Array(20).fill(false);
         let remaining = 20;
@@ -351,24 +361,33 @@ def drag_drop_game():
             remainingSpan.innerText = remaining;
         }
 
-        function checkWin() {
-            if (remaining === 0) {
-                winDiv.style.display = 'block';
-                createBalloons();
+        // Shuffle array (Fisher-Yates)
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
             }
+            return arr;
         }
 
-        function createBalloons() {
-            const balloonDiv = document.createElement('div');
-            balloonDiv.style.position = 'fixed';
-            balloonDiv.style.top = '0';
-            balloonDiv.style.left = '0';
-            balloonDiv.style.width = '100%';
-            balloonDiv.style.height = '100%';
-            balloonDiv.style.pointerEvents = 'none';
-            balloonDiv.style.zIndex = '10000';
-            document.body.appendChild(balloonDiv);
-            for (let i = 0; i < 100; i++) {
+        function initHiddenNumbers() {
+            // create array [0,1,...,19]
+            let arr = Array.from({length: 20}, (_, i) => i);
+            return shuffleArray(arr);
+        }
+
+        function createBalloonsAndStars() {
+            const container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.top = '0';
+            container.style.left = '0';
+            container.style.width = '100%';
+            container.style.height = '100%';
+            container.style.pointerEvents = 'none';
+            container.style.zIndex = '10000';
+            document.body.appendChild(container);
+            // Balloons
+            for (let i = 0; i < 120; i++) {
                 const balloon = document.createElement('div');
                 balloon.style.position = 'absolute';
                 balloon.style.bottom = '-50px';
@@ -381,7 +400,21 @@ def drag_drop_game():
                 balloon.style.fontSize = '24px';
                 balloon.style.textAlign = 'center';
                 balloon.innerHTML = '🎈';
-                balloonDiv.appendChild(balloon);
+                container.appendChild(balloon);
+            }
+            // Stars (small golden circles)
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.style.position = 'absolute';
+                star.style.bottom = '-20px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.width = '8px';
+                star.style.height = '8px';
+                star.style.backgroundColor = '#ffd966';
+                star.style.borderRadius = '50%';
+                star.style.animation = `floatUp ${3 + Math.random() * 2}s linear forwards`;
+                star.style.boxShadow = '0 0 6px gold';
+                container.appendChild(star);
             }
             const style = document.createElement('style');
             style.textContent = `
@@ -391,82 +424,60 @@ def drag_drop_game():
                 }
             `;
             document.head.appendChild(style);
-            setTimeout(() => { balloonDiv.remove(); }, 7000);
+            setTimeout(() => { container.remove(); }, 8000);
         }
 
-        // Create squares (no visible label, only a visual placeholder)
-        for (let i = 0; i < 20; i++) {
-            const square = document.createElement('div');
-            square.className = 'square';
-            square.setAttribute('data-square-id', i);
-            square.innerHTML = `<div class="triangle-placed"></div>`;
-            square.addEventListener('dragover', (e) => {
-                e.preventDefault();
-            });
-            square.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const squareId = parseInt(e.currentTarget.getAttribute('data-square-id'));
-                if (squareFilled[squareId]) return;
-                const triangleId = e.dataTransfer.getData('text/plain');
-                if (triangleId === null) return;
-                const tid = parseInt(triangleId);
-                if (triangleUsed[tid]) return;
-                if (tid === squareId) {
-                    playSound('success');
-                    squareFilled[squareId] = true;
-                    triangleUsed[tid] = true;
-                    remaining--;
-                    updateRemaining();
-                    e.currentTarget.classList.add('correct');
-                    e.currentTarget.querySelector('.triangle-placed').innerHTML = '🔺';
-                    const triangleElem = document.getElementById(`triangle-${tid}`);
-                    if (triangleElem) triangleElem.remove();
-                    checkWin();
-                } else {
-                    playSound('error');
-                    showErrorToast();
-                }
-            });
-            squaresContainer.appendChild(square);
+        function checkWin() {
+            if (remaining === 0) {
+                winDiv.style.display = 'block';
+                playSound('win');
+                createBalloonsAndStars();
+            }
         }
 
-        // Create triangles with visible numbers
-        for (let i = 0; i < 20; i++) {
-            const triangle = document.createElement('div');
-            triangle.id = `triangle-${i}`;
-            triangle.className = 'triangle';
-            triangle.setAttribute('draggable', 'true');
-            triangle.setAttribute('data-triangle-id', i);
-            triangle.innerHTML = `🔺<span>${i+1}</span>`;
-            triangle.addEventListener('dragstart', (e) => {
-                if (triangleUsed[i]) {
+        // Build the squares (initially empty)
+        function buildSquares() {
+            squaresContainer.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const square = document.createElement('div');
+                square.className = 'square';
+                square.setAttribute('data-square-id', i);
+                square.innerHTML = `<div class="triangle-placed"></div>`;
+                square.addEventListener('dragover', (e) => e.preventDefault());
+                square.addEventListener('drop', (e) => {
                     e.preventDefault();
-                    return false;
-                }
-                e.dataTransfer.setData('text/plain', i);
-                e.dataTransfer.effectAllowed = 'move';
-                e.target.classList.add('dragging');
-            });
-            triangle.addEventListener('dragend', (e) => {
-                e.target.classList.remove('dragging');
-            });
-            trianglesContainer.appendChild(triangle);
+                    const squareIdx = parseInt(e.currentTarget.getAttribute('data-square-id'));
+                    if (squareFilled[squareIdx]) return;
+                    const triangleId = e.dataTransfer.getData('text/plain');
+                    if (triangleId === null) return;
+                    const tid = parseInt(triangleId);
+                    if (triangleUsed[tid]) return;
+                    // check if triangle number matches hidden square number
+                    if (tid === squareHiddenNumbers[squareIdx]) {
+                        playSound('success');
+                        squareFilled[squareIdx] = true;
+                        triangleUsed[tid] = true;
+                        remaining--;
+                        updateRemaining();
+                        e.currentTarget.classList.add('correct');
+                        e.currentTarget.querySelector('.triangle-placed').innerHTML = '🔺';
+                        const triangleElem = document.getElementById(`triangle-${tid}`);
+                        if (triangleElem) triangleElem.remove();
+                        checkWin();
+                    } else {
+                        playSound('error');
+                        showErrorToast();
+                    }
+                });
+                squaresContainer.appendChild(square);
+            }
         }
 
-        function resetGame() {
-            squareFilled.fill(false);
-            triangleUsed.fill(false);
-            remaining = 20;
-            updateRemaining();
-            winDiv.style.display = 'none';
-            const squares = document.querySelectorAll('.square');
-            squares.forEach((square) => {
-                square.classList.remove('correct');
-                const placedDiv = square.querySelector('.triangle-placed');
-                placedDiv.innerHTML = '';
-            });
+        // Build the triangles (with numbers 1-20)
+        function buildTriangles() {
             trianglesContainer.innerHTML = '';
             for (let i = 0; i < 20; i++) {
+                if (triangleUsed[i]) continue; // skip already placed
                 const triangle = document.createElement('div');
                 triangle.id = `triangle-${i}`;
                 triangle.className = 'triangle';
@@ -489,8 +500,31 @@ def drag_drop_game():
             }
         }
 
-        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        function resetGame() {
+            // reshuffle hidden numbers
+            squareHiddenNumbers = initHiddenNumbers();
+            squareFilled.fill(false);
+            triangleUsed.fill(false);
+            remaining = 20;
+            updateRemaining();
+            winDiv.style.display = 'none';
+            // rebuild squares (clear styles)
+            const squares = document.querySelectorAll('.square');
+            squares.forEach((sq, idx) => {
+                sq.classList.remove('correct');
+                sq.querySelector('.triangle-placed').innerHTML = '';
+            });
+            // rebuild triangles from scratch
+            buildTriangles();
+        }
+
+        // Initial call
+        squareHiddenNumbers = initHiddenNumbers();
+        buildSquares();
+        buildTriangles();
         updateRemaining();
+
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
     </script>
     </body>
     </html>
@@ -500,8 +534,8 @@ def drag_drop_game():
 # ---------- MAIN APP AFTER LOGIN ----------
 def main_app():
     show_sidebar()
-    st.markdown("<h1 style='text-align:center;'>🔺 Hidden Match Memory Puzzle 🔲</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>The squares have hidden numbers (1‑20). Drag each triangle (which shows its number) onto the square you believe is its match. Wrong placement = error sound; correct = success and the triangle disappears. Remember where each number belongs! Fit all 20 to win.</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;'>🔺 Shuffled Hidden Match Puzzle 🔲</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>Each time you reset, the hidden numbers (1‑20) are randomly assigned to the squares. Your goal: drag each triangle to the square that hides its matching number. Wrong placement = error sound; correct = success and the triangle stays in that square. Remember the positions! Fit all 20 to win with balloons, stars, and a victory chime.</p>", unsafe_allow_html=True)
     drag_drop_game()
     st.markdown('<div class="footer">© GlobalInternet.py – Train your brain, one puzzle at a time.</div>', unsafe_allow_html=True)
 
