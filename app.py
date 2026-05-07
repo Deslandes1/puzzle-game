@@ -1,6 +1,4 @@
 import streamlit as st
-from datetime import datetime
-import random
 
 st.set_page_config(
     page_title="Triangle Puzzle | GlobalInternet.py",
@@ -106,25 +104,23 @@ def spinning_globe():
     """, unsafe_allow_html=True)
 
 # ---------- LOGIN / LOGOUT ----------
-if "game_authenticated" not in st.session_state:
-    st.session_state.game_authenticated = False
-if "game_state" not in st.session_state:
-    st.session_state.game_state = {
-        "triangles": [{"id": i, "placed": False, "square": None} for i in range(6)],
-        "selected_triangle": None,
-        "win": False
-    }
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "triangles" not in st.session_state:
+    # Each triangle: {id, placed, square_index}
+    st.session_state.triangles = [{"id": i, "placed": False, "square": None} for i in range(6)]
+if "selected_triangle" not in st.session_state:
+    st.session_state.selected_triangle = None
 
 def logout():
-    st.session_state.game_authenticated = False
+    st.session_state.authenticated = False
+    st.session_state.triangles = [{"id": i, "placed": False, "square": None} for i in range(6)]
+    st.session_state.selected_triangle = None
     st.rerun()
 
 def reset_game():
-    st.session_state.game_state = {
-        "triangles": [{"id": i, "placed": False, "square": None} for i in range(6)],
-        "selected_triangle": None,
-        "win": False
-    }
+    st.session_state.triangles = [{"id": i, "placed": False, "square": None} for i in range(6)]
+    st.session_state.selected_triangle = None
     st.rerun()
 
 def login_page():
@@ -150,10 +146,10 @@ def login_page():
             <div class="login-title">Triangle Puzzle</div>
             <p style="color:white;">Enter password to start the game</p>
     """, unsafe_allow_html=True)
-    password = st.text_input("Password", type="password", key="game_pass")
-    if st.button("🔐 Login", width="stretch"):
+    password = st.text_input("Password", type="password", key="login_pass")
+    if st.button("🔐 Login", use_container_width=True):
         if password == "20082010":
-            st.session_state.game_authenticated = True
+            st.session_state.authenticated = True
             st.rerun()
         else:
             st.error("Incorrect password.")
@@ -179,7 +175,7 @@ def game_main():
     | **Single‑User** | $5 |
     | **Source Code** | $49 |
     """)
-    if st.sidebar.button("🔓 Logout", width="stretch"):
+    if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
 
     # Main content
@@ -191,6 +187,10 @@ def game_main():
     Every puzzle is like a small workout for the brain – helping our mind grow sharper, more creative, and more patient with challenges.
     </div>
     """, unsafe_allow_html=True)
+
+    # Stats
+    remaining = sum(1 for t in st.session_state.triangles if not t["placed"])
+    st.info(f"📊 **Remaining triangles:** {remaining} of 6. Place them into any square (multiple per square).")
 
     # Layout: squares on left, triangles on right
     col_squares, col_triangles = st.columns([2, 1])
@@ -204,29 +204,27 @@ def game_main():
             for col_idx in range(2):
                 square_index = row * 2 + col_idx
                 # Count triangles already placed in this square
-                triangles_in_square = [t for t in st.session_state.game_state["triangles"] if t["square"] == square_index]
+                triangles_in_square = [t for t in st.session_state.triangles if t["placed"] and t["square"] == square_index]
                 placed_count = len(triangles_in_square)
                 with row_cols[col_idx]:
                     st.markdown(f"""
                     <div class="game-square">
                         <h3>Square {square_index+1}</h3>
-                        <div style="font-size:1.5rem;">🔲</div>
+                        <div style="font-size:2rem;">🔲</div>
                         <div>{'🔺 ' * placed_count}</div>
                         <div>({placed_count}/6 triangles)</div>
                     </div>
                     """, unsafe_allow_html=True)
                     if st.button(f"Place here → Square {square_index+1}", key=f"place_{square_index}"):
-                        if st.session_state.game_state["selected_triangle"] is not None:
-                            tri_id = st.session_state.game_state["selected_triangle"]
-                            for t in st.session_state.game_state["triangles"]:
+                        if st.session_state.selected_triangle is not None:
+                            tri_id = st.session_state.selected_triangle
+                            # Find the triangle
+                            for t in st.session_state.triangles:
                                 if t["id"] == tri_id and not t["placed"]:
                                     t["placed"] = True
                                     t["square"] = square_index
-                                    st.session_state.game_state["selected_triangle"] = None
+                                    st.session_state.selected_triangle = None
                                     break
-                            # check win
-                            if all(t["placed"] for t in st.session_state.game_state["triangles"]):
-                                st.session_state.game_state["win"] = True
                             st.rerun()
                         else:
                             st.warning("First select a triangle from the right panel!")
@@ -235,24 +233,23 @@ def game_main():
     with col_triangles:
         st.markdown("### 🔺 Available Triangles")
         st.markdown("*Click a triangle to select it, then click a square.*")
-        unplaced = [t for t in st.session_state.game_state["triangles"] if not t["placed"]]
+        unplaced = [t for t in st.session_state.triangles if not t["placed"]]
         if unplaced:
             for tri in unplaced:
-                is_selected = (st.session_state.game_state["selected_triangle"] == tri["id"])
-                label = f"🔺 Triangle {tri['id']+1}"
-                if st.button(label, key=f"tri_{tri['id']}"):
-                    st.session_state.game_state["selected_triangle"] = tri["id"]
+                is_selected = (st.session_state.selected_triangle == tri["id"])
+                if st.button(f"🔺 Triangle {tri['id']+1}", key=f"tri_{tri['id']}"):
+                    st.session_state.selected_triangle = tri["id"]
                     st.rerun()
                 if is_selected:
-                    st.markdown(f"<p style='color:#e94560; font-weight:bold;'>✓ Selected: Triangle {tri['id']+1}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='color:#e94560; font-weight:bold;'>✓ Selected</p>", unsafe_allow_html=True)
         else:
             st.success("🎉 All triangles placed! You win!")
 
-        if st.button("⟳ Reset Game", width="stretch"):
+        if st.button("⟳ Reset Game", use_container_width=True):
             reset_game()
 
     # Win celebration
-    if st.session_state.game_state["win"]:
+    if all(t["placed"] for t in st.session_state.triangles):
         st.markdown('<div class="win-message">🎉 YOU WIN! 🎉</div>', unsafe_allow_html=True)
         st.balloons()
         st.snow()
@@ -261,7 +258,7 @@ def game_main():
     st.caption("© GlobalInternet.py – Train your brain, one puzzle at a time.")
 
 # ---------- ROUTING ----------
-if not st.session_state.game_authenticated:
+if not st.session_state.authenticated:
     login_page()
 else:
     game_main()
