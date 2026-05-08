@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- CUSTOM CSS (ensures white text for description and footer) ----------
+# ---------- CUSTOM CSS (ensures white text) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -49,7 +49,6 @@ st.markdown("""
     h1, h2, h3 {
         color: #ffd966 !important;
     }
-    /* Force all main text and footer to white */
     p, li, .stMarkdown, .stCaption, .footer {
         color: #ffffff !important;
     }
@@ -62,7 +61,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- SPINNING GLOBE SIDEBAR FUNCTION ----------
+# ---------- SPINNING GLOBE SIDEBAR ----------
 def spinning_globe():
     st.sidebar.markdown("""
     <div style="text-align: center;">
@@ -98,7 +97,7 @@ def login_page():
             st.error("Incorrect password.")
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-# ---------- SIDEBAR (visible only after login) ----------
+# ---------- SIDEBAR ----------
 def show_sidebar():
     spinning_globe()
     st.sidebar.markdown("## **GlobalInternet.py**")
@@ -121,7 +120,7 @@ def show_sidebar():
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
 
-# ---------- HTML/JS DRAG-AND-DROP MEMORY PUZZLE (shuffled hidden numbers) ----------
+# ---------- DRAG-AND-DROP MEMORY PUZZLE (with golden names win celebration) ----------
 def drag_drop_game():
     game_html = """
     <!DOCTYPE html>
@@ -375,6 +374,7 @@ def drag_drop_game():
             return shuffleArray(arr);
         }
 
+        // New win celebration: balloons + golden names floating up
         function createBalloonsAndStars() {
             const container = document.createElement('div');
             container.style.position = 'fixed';
@@ -385,6 +385,8 @@ def drag_drop_game():
             container.style.pointerEvents = 'none';
             container.style.zIndex = '10000';
             document.body.appendChild(container);
+
+            // Balloons
             for (let i = 0; i < 120; i++) {
                 const balloon = document.createElement('div');
                 balloon.style.position = 'absolute';
@@ -400,7 +402,33 @@ def drag_drop_game():
                 balloon.innerHTML = '🎈';
                 container.appendChild(balloon);
             }
-            for (let i = 0; i < 100; i++) {
+
+            // Golden names flying with balloons
+            const names = [
+                "Gesner Junior Deslandes",
+                "Roosevelt Deslandes",
+                "Sebastien Stephane Deslandes",
+                "Zendaya Christelle Deslandes"
+            ];
+            names.forEach((name) => {
+                const nameDiv = document.createElement('div');
+                nameDiv.textContent = name;
+                nameDiv.style.position = 'absolute';
+                nameDiv.style.bottom = '-30px';
+                nameDiv.style.left = Math.random() * 80 + 10 + '%'; // random horizontal position
+                nameDiv.style.fontSize = '1.5rem';
+                nameDiv.style.fontWeight = 'bold';
+                nameDiv.style.color = '#FFD700'; // golden
+                nameDiv.style.textShadow = '0 0 5px #ffaa33, 0 0 10px #ff8800';
+                nameDiv.style.fontFamily = 'Arial, sans-serif';
+                nameDiv.style.whiteSpace = 'nowrap';
+                nameDiv.style.animation = `floatName ${5 + Math.random() * 3}s linear forwards`;
+                nameDiv.style.zIndex = '10001';
+                container.appendChild(nameDiv);
+            });
+
+            // Star particles (small golden dots)
+            for (let i = 0; i < 150; i++) {
                 const star = document.createElement('div');
                 star.style.position = 'absolute';
                 star.style.bottom = '-20px';
@@ -413,15 +441,20 @@ def drag_drop_game():
                 star.style.boxShadow = '0 0 6px gold';
                 container.appendChild(star);
             }
+
             const style = document.createElement('style');
             style.textContent = `
                 @keyframes floatUp {
                     0% { transform: translateY(0) rotate(0deg); opacity: 1; }
                     100% { transform: translateY(-120vh) rotate(20deg); opacity: 0; }
                 }
+                @keyframes floatName {
+                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+                    100% { transform: translateY(-110vh) rotate(10deg); opacity: 0; }
+                }
             `;
             document.head.appendChild(style);
-            setTimeout(() => { container.remove(); }, 8000);
+            setTimeout(() => { container.remove(); }, 9000);
         }
 
         function checkWin() {
@@ -521,7 +554,7 @@ def drag_drop_game():
     """
     components.html(game_html, height=800, scrolling=False)
 
-# ---------- MAIN APP AFTER LOGIN ----------
+# ---------- MAIN APP ----------
 def main_app():
     show_sidebar()
     st.markdown("<h1 style='text-align:center;'>🔺 Shuffled Hidden Match Puzzle 🔲</h1>", unsafe_allow_html=True)
