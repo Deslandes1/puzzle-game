@@ -117,109 +117,134 @@ def show_sidebar():
     | **Single‑User** | $5 |
     | **Source Code** | $49 |
     """)
+    # Level selection
+    level = st.sidebar.selectbox("🎮 Choose Difficulty Level", ["Level 1 (10x10)", "Level 2 (20x20)", "Level 3 (100x100)"])
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
+    return level
 
-# ---------- DRAG-AND-DROP MEMORY PUZZLE (with TikTok flying words) ----------
-def drag_drop_game():
-    game_html = """
+# ---------- DRAG-AND-DROP MEMORY PUZZLE (3 levels) ----------
+def drag_drop_game(level):
+    # Map level name to count
+    if "Level 1" in level:
+        count = 10
+        celebration_type = "belikebrit"
+    elif "Level 2" in level:
+        count = 20
+        celebration_type = "kids"
+    else:
+        count = 100
+        celebration_type = "generic"
+    
+    # For 100 items, reduce square size via CSS
+    square_size = "50px" if count == 100 else "80px"
+    triangle_size = "50px" if count == 100 else "80px"
+    font_size = "24px" if count == 100 else "40px"
+    
+    game_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <style>
-            * {
+            * {{
                 user-select: none;
                 -webkit-tap-highlight-color: transparent;
-            }
-            body {
+            }}
+            body {{
                 background: transparent;
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 padding: 1rem;
-            }
-            .game-container {
+            }}
+            .game-container {{
                 background: rgba(0,0,0,0.3);
                 border-radius: 30px;
                 padding: 1.5rem;
-            }
-            .game-title {
+            }}
+            .game-title {{
                 text-align: center;
                 margin-bottom: 1.5rem;
-            }
-            .game-title h2 {
+            }}
+            .game-title h2 {{
                 color: #ffd966;
                 margin: 0;
-            }
-            .game-title p {
+            }}
+            .game-title p {{
                 color: #ddd;
                 font-size: 1rem;
-            }
-            .grid {
+            }}
+            .grid {{
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
-                gap: 15px;
+                gap: 10px;
                 margin: 20px 0;
-            }
-            .square {
-                width: 80px;
-                height: 80px;
+                max-height: 400px;
+                overflow-y: auto;
+                padding: 10px;
+            }}
+            .square {{
+                width: {square_size};
+                height: {square_size};
                 background: rgba(255, 217, 102, 0.2);
-                border: 3px solid #ffd966;
-                border-radius: 15px;
+                border: 2px solid #ffd966;
+                border-radius: 12px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 transition: all 0.2s;
                 position: relative;
-            }
-            .square.correct {
+            }}
+            .square.correct {{
                 background: rgba(46, 125, 50, 0.6);
                 border-color: #4caf50;
                 box-shadow: 0 0 12px #4caf50;
-            }
-            .square .triangle-placed {
-                font-size: 40px;
+            }}
+            .square .triangle-placed {{
+                font-size: {font_size};
                 cursor: default;
-            }
-            .triangle {
-                width: 80px;
-                height: 80px;
+            }}
+            .triangle {{
+                width: {triangle_size};
+                height: {triangle_size};
                 background: linear-gradient(135deg, #ff9a9e, #fad0c4);
-                border-radius: 15px;
+                border-radius: 12px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                font-size: 40px;
+                font-size: {font_size};
                 cursor: grab;
                 transition: all 0.2s;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                 margin: 0 auto;
-            }
-            .triangle span {
-                font-size: 12px;
+            }}
+            .triangle span {{
+                font-size: 10px;
                 font-weight: bold;
                 margin-top: 4px;
-            }
-            .triangle.dragging {
+            }}
+            .triangle.dragging {{
                 opacity: 0.5;
                 cursor: grabbing;
-            }
-            .triangle:hover {
+            }}
+            .triangle:hover {{
                 transform: scale(1.05);
                 background: #ff6b6b;
-            }
-            .triangle-container {
+            }}
+            .triangle-container {{
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
-                gap: 15px;
+                gap: 10px;
                 margin: 20px 0;
-            }
-            .info-panel {
+                max-height: 300px;
+                overflow-y: auto;
+                padding: 10px;
+            }}
+            .info-panel {{
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -229,12 +254,12 @@ def drag_drop_game():
                 background: rgba(0,0,0,0.5);
                 padding: 10px 20px;
                 border-radius: 40px;
-            }
-            .remaining {
+            }}
+            .remaining {{
                 color: white;
                 font-weight: bold;
-            }
-            .reset-btn {
+            }}
+            .reset-btn {{
                 background-color: #e94560;
                 color: white;
                 border: none;
@@ -243,25 +268,25 @@ def drag_drop_game():
                 font-weight: bold;
                 cursor: pointer;
                 transition: 0.2s;
-            }
-            .reset-btn:hover {
+            }}
+            .reset-btn:hover {{
                 background-color: #ff6b6b;
                 transform: scale(1.02);
-            }
-            .win-message {
+            }}
+            .win-message {{
                 text-align: center;
                 font-size: 2rem;
                 font-weight: bold;
                 color: #ffd966;
                 animation: pulse 0.8s infinite;
                 margin-top: 20px;
-            }
-            @keyframes pulse {
-                0% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.05); opacity: 0.8; }
-                100% { transform: scale(1); opacity: 1; }
-            }
-            .error-toast {
+            }}
+            @keyframes pulse {{
+                0% {{ transform: scale(1); opacity: 1; }}
+                50% {{ transform: scale(1.05); opacity: 0.8; }}
+                100% {{ transform: scale(1); opacity: 1; }}
+            }}
+            .error-toast {{
                 position: fixed;
                 bottom: 20px;
                 left: 50%;
@@ -275,30 +300,27 @@ def drag_drop_game():
                 z-index: 1000;
                 opacity: 0;
                 transition: opacity 0.2s;
-            }
-            @media (max-width: 700px) {
-                .square { width: 65px; height: 65px; }
-                .triangle { width: 65px; height: 65px; font-size: 35px; }
-                .triangle span { font-size: 10px; }
-                .triangle-placed { font-size: 35px; }
-            }
+            }}
+            @media (max-width: 700px) {{
+                .square {{ width: 40px; height: 40px; }}
+                .triangle {{ width: 40px; height: 40px; font-size: 20px; }}
+                .triangle span {{ font-size: 8px; }}
+                .triangle-placed {{ font-size: 20px; }}
+            }}
         </style>
     </head>
     <body>
     <div class="game-container">
         <div class="game-title">
-            <h2>🔺 Shuffled Memory Puzzle 🔲</h2>
-            <p>Each square hides a random number (1‑20). Drag the triangle to the square you believe contains its matching number. Wrong = error sound, correct = success and the triangle stays. Remember positions! All numbers are shuffled each game.</p>
+            <h2>🔺 {level} – Shuffled Memory Puzzle 🔲</h2>
+            <p>Each square hides a random number (1‑{count}). Drag the triangle to the square you believe contains its matching number. Wrong = error sound, correct = success and the triangle stays. Remember positions!</p>
         </div>
 
-        <!-- Squares (20 squares, no visible numbers) -->
         <div id="squaresContainer" class="grid"></div>
-
-        <!-- Triangles (20 draggable, showing numbers) -->
         <div id="trianglesContainer" class="triangle-container"></div>
 
         <div class="info-panel">
-            <span class="remaining">🔺 Remaining triangles: <span id="remainingCount">20</span></span>
+            <span class="remaining">🔺 Remaining triangles: <span id="remainingCount">{count}</span></span>
             <button class="reset-btn" id="resetBtn">⟳ Reset Game (reshuffle hidden numbers)</button>
         </div>
         <div id="winMessage" style="display: none;" class="win-message">🎉 YOU WIN! 🎉</div>
@@ -306,45 +328,46 @@ def drag_drop_game():
     <div id="errorToast" class="error-toast">❌ Wrong square! Try again.</div>
 
     <script>
+        const count = {count};
         let audioCtx = null;
-        function playSound(type) {
-            if (!audioCtx) {
+        function playSound(type) {{
+            if (!audioCtx) {{
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            audioCtx.resume().then(() => {
+            }}
+            audioCtx.resume().then(() => {{
                 const oscillator = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 oscillator.connect(gain);
                 gain.connect(audioCtx.destination);
-                if (type === 'success') {
+                if (type === 'success') {{
                     oscillator.frequency.value = 880;
                     gain.gain.value = 0.3;
                     oscillator.type = 'sine';
                     gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.8);
                     oscillator.start();
                     oscillator.stop(audioCtx.currentTime + 0.8);
-                } else if (type === 'error') {
+                }} else if (type === 'error') {{
                     oscillator.frequency.value = 220;
                     gain.gain.value = 0.2;
                     oscillator.type = 'square';
                     gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
                     oscillator.start();
                     oscillator.stop(audioCtx.currentTime + 0.5);
-                } else if (type === 'win') {
+                }} else if (type === 'win') {{
                     oscillator.frequency.value = 1046.5;
                     gain.gain.value = 0.3;
                     oscillator.type = 'sine';
                     gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1.2);
                     oscillator.start();
                     oscillator.stop(audioCtx.currentTime + 1.2);
-                }
-            }).catch(e => console.log("Audio error", e));
-        }
+                }}
+            }}).catch(e => console.log("Audio error", e));
+        }}
 
         let squareHiddenNumbers = [];
-        let squareFilled = new Array(20).fill(false);
-        let triangleUsed = new Array(20).fill(false);
-        let remaining = 20;
+        let squareFilled = new Array(count).fill(false);
+        let triangleUsed = new Array(count).fill(false);
+        let remaining = count;
 
         const squaresContainer = document.getElementById('squaresContainer');
         const trianglesContainer = document.getElementById('trianglesContainer');
@@ -352,29 +375,29 @@ def drag_drop_game():
         const winDiv = document.getElementById('winMessage');
         const errorToast = document.getElementById('errorToast');
 
-        function showErrorToast() {
+        function showErrorToast() {{
             errorToast.style.opacity = '1';
-            setTimeout(() => { errorToast.style.opacity = '0'; }, 1500);
-        }
+            setTimeout(() => {{ errorToast.style.opacity = '0'; }}, 1500);
+        }}
 
-        function updateRemaining() {
+        function updateRemaining() {{
             remainingSpan.innerText = remaining;
-        }
+        }}
 
-        function shuffleArray(arr) {
-            for (let i = arr.length - 1; i > 0; i--) {
+        function shuffleArray(arr) {{
+            for (let i = arr.length - 1; i > 0; i--) {{
                 const j = Math.floor(Math.random() * (i + 1));
                 [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
+            }}
             return arr;
-        }
+        }}
 
-        function initHiddenNumbers() {
-            let arr = Array.from({length: 20}, (_, i) => i);
+        function initHiddenNumbers() {{
+            let arr = Array.from({{length: count}}, (_, i) => i);
             return shuffleArray(arr);
-        }
+        }}
 
-        function createBalloonsAndStars() {
+        function createCelebration() {{
             const container = document.createElement('div');
             container.style.position = 'fixed';
             container.style.top = '0';
@@ -386,66 +409,65 @@ def drag_drop_game():
             document.body.appendChild(container);
 
             // Balloons (120)
-            for (let i = 0; i < 120; i++) {
+            for (let i = 0; i < 120; i++) {{
                 const balloon = document.createElement('div');
                 balloon.style.position = 'absolute';
                 balloon.style.bottom = '-50px';
                 balloon.style.left = Math.random() * 100 + '%';
                 balloon.style.width = '40px';
                 balloon.style.height = '50px';
-                balloon.style.backgroundColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
+                balloon.style.backgroundColor = `hsl(${{Math.random() * 360}}, 80%, 60%)`;
                 balloon.style.borderRadius = '50%';
-                balloon.style.animation = `floatUp ${4 + Math.random() * 2}s linear forwards`;
+                balloon.style.animation = `floatUp ${{4 + Math.random() * 2}}s linear forwards`;
                 balloon.style.fontSize = '24px';
                 balloon.style.textAlign = 'center';
                 balloon.innerHTML = '🎈';
                 container.appendChild(balloon);
-            }
+            }}
 
-            // Golden names
-            const names = [
-                "Gesner Junior Deslandes",
-                "Roosevelt Deslandes",
-                "Sebastien Stephane Deslandes",
-                "Zendaya Christelle Deslandes"
-            ];
-            names.forEach((name) => {
-                const nameDiv = document.createElement('div');
-                nameDiv.textContent = name;
-                nameDiv.style.position = 'absolute';
-                nameDiv.style.bottom = '-30px';
-                nameDiv.style.left = Math.random() * 80 + 10 + '%';
-                nameDiv.style.fontSize = '1.5rem';
-                nameDiv.style.fontWeight = 'bold';
-                nameDiv.style.color = '#FFD700';
-                nameDiv.style.textShadow = '0 0 5px #ffaa33, 0 0 10px #ff8800';
-                nameDiv.style.fontFamily = 'Arial, sans-serif';
-                nameDiv.style.whiteSpace = 'nowrap';
-                nameDiv.style.animation = `floatName ${5 + Math.random() * 3}s linear forwards`;
-                nameDiv.style.zIndex = '10001';
-                container.appendChild(nameDiv);
-            });
+            const celebrationType = "{celebration_type}";
+            if (celebrationType === "belikebrit") {{
+                // "Be Like Brit" three times
+                for (let i = 0; i < 3; i++) {{
+                    const word = document.createElement('div');
+                    word.textContent = "Be Like Brit";
+                    word.style.position = 'absolute';
+                    word.style.bottom = '-40px';
+                    word.style.left = Math.random() * 90 + 5 + '%';
+                    word.style.fontSize = '2rem';
+                    word.style.fontWeight = 'bold';
+                    word.style.color = '#ffffff';
+                    word.style.textShadow = '0 0 8px #00d4ff, 0 0 12px #ffaa33';
+                    word.style.fontFamily = 'Arial Black, sans-serif';
+                    word.style.whiteSpace = 'nowrap';
+                    word.style.animation = `floatName ${{5 + Math.random() * 3}}s linear forwards`;
+                    word.style.zIndex = '10001';
+                    container.appendChild(word);
+                }}
+            }} else if (celebrationType === "kids") {{
+                const kids = ["Gesner Junior Deslandes", "Roosevelt Deslandes", "Sebastien Stephane Deslandes", "Zendaya Christelle Deslandes"];
+                kids.forEach((name) => {{
+                    const nameDiv = document.createElement('div');
+                    nameDiv.textContent = name;
+                    nameDiv.style.position = 'absolute';
+                    nameDiv.style.bottom = '-30px';
+                    nameDiv.style.left = Math.random() * 80 + 10 + '%';
+                    nameDiv.style.fontSize = '1.5rem';
+                    nameDiv.style.fontWeight = 'bold';
+                    nameDiv.style.color = '#FFD700';
+                    nameDiv.style.textShadow = '0 0 5px #ffaa33, 0 0 10px #ff8800';
+                    nameDiv.style.fontFamily = 'Arial, sans-serif';
+                    nameDiv.style.whiteSpace = 'nowrap';
+                    nameDiv.style.animation = `floatName ${{5 + Math.random() * 3}}s linear forwards`;
+                    nameDiv.style.zIndex = '10001';
+                    container.appendChild(nameDiv);
+                }});
+            }} else {{
+                // generic: stars only (already added below)
+            }}
 
-            // Four TikTok words (flying separately)
-            for (let i = 0; i < 4; i++) {
-                const tiktokDiv = document.createElement('div');
-                tiktokDiv.textContent = 'TikTok';
-                tiktokDiv.style.position = 'absolute';
-                tiktokDiv.style.bottom = '-40px';
-                tiktokDiv.style.left = Math.random() * 90 + 5 + '%';
-                tiktokDiv.style.fontSize = '2rem';
-                tiktokDiv.style.fontWeight = 'bold';
-                tiktokDiv.style.color = '#ffffff';
-                tiktokDiv.style.textShadow = '0 0 8px #00d4ff, 0 0 12px #ffaa33';
-                tiktokDiv.style.fontFamily = 'Arial Black, sans-serif';
-                tiktokDiv.style.whiteSpace = 'nowrap';
-                tiktokDiv.style.animation = `floatTikTok ${4 + Math.random() * 3}s linear forwards`;
-                tiktokDiv.style.zIndex = '10002';
-                container.appendChild(tiktokDiv);
-            }
-
-            // Star particles
-            for (let i = 0; i < 150; i++) {
+            // Stars (always)
+            for (let i = 0; i < 150; i++) {{
                 const star = document.createElement('div');
                 star.style.position = 'absolute';
                 star.style.bottom = '-20px';
@@ -454,47 +476,43 @@ def drag_drop_game():
                 star.style.height = '8px';
                 star.style.backgroundColor = '#ffd966';
                 star.style.borderRadius = '50%';
-                star.style.animation = `floatUp ${3 + Math.random() * 2}s linear forwards`;
+                star.style.animation = `floatUp ${{3 + Math.random() * 2}}s linear forwards`;
                 star.style.boxShadow = '0 0 6px gold';
                 container.appendChild(star);
-            }
+            }}
 
             const style = document.createElement('style');
             style.textContent = `
-                @keyframes floatUp {
-                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-                    100% { transform: translateY(-120vh) rotate(20deg); opacity: 0; }
-                }
-                @keyframes floatName {
-                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-                    100% { transform: translateY(-110vh) rotate(10deg); opacity: 0; }
-                }
-                @keyframes floatTikTok {
-                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-                    100% { transform: translateY(-130vh) rotate(15deg); opacity: 0; }
-                }
+                @keyframes floatUp {{
+                    0% {{ transform: translateY(0) rotate(0deg); opacity: 1; }}
+                    100% {{ transform: translateY(-120vh) rotate(20deg); opacity: 0; }}
+                }}
+                @keyframes floatName {{
+                    0% {{ transform: translateY(0) rotate(0deg); opacity: 1; }}
+                    100% {{ transform: translateY(-110vh) rotate(10deg); opacity: 0; }}
+                }}
             `;
             document.head.appendChild(style);
-            setTimeout(() => { container.remove(); }, 9000);
-        }
+            setTimeout(() => {{ container.remove(); }}, 9000);
+        }}
 
-        function checkWin() {
-            if (remaining === 0) {
+        function checkWin() {{
+            if (remaining === 0) {{
                 winDiv.style.display = 'block';
                 playSound('win');
-                createBalloonsAndStars();
-            }
-        }
+                createCelebration();
+            }}
+        }}
 
-        function buildSquares() {
+        function buildSquares() {{
             squaresContainer.innerHTML = '';
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < count; i++) {{
                 const square = document.createElement('div');
                 square.className = 'square';
                 square.setAttribute('data-square-id', i);
                 square.innerHTML = `<div class="triangle-placed"></div>`;
                 square.addEventListener('dragover', (e) => e.preventDefault());
-                square.addEventListener('drop', (e) => {
+                square.addEventListener('drop', (e) => {{
                     e.preventDefault();
                     const squareIdx = parseInt(e.currentTarget.getAttribute('data-square-id'));
                     if (squareFilled[squareIdx]) return;
@@ -502,7 +520,7 @@ def drag_drop_game():
                     if (triangleId === null) return;
                     const tid = parseInt(triangleId);
                     if (triangleUsed[tid]) return;
-                    if (tid === squareHiddenNumbers[squareIdx]) {
+                    if (tid === squareHiddenNumbers[squareIdx]) {{
                         playSound('success');
                         squareFilled[squareIdx] = true;
                         triangleUsed[tid] = true;
@@ -510,58 +528,58 @@ def drag_drop_game():
                         updateRemaining();
                         e.currentTarget.classList.add('correct');
                         e.currentTarget.querySelector('.triangle-placed').innerHTML = '🔺';
-                        const triangleElem = document.getElementById(`triangle-${tid}`);
+                        const triangleElem = document.getElementById(`triangle-${{tid}}`);
                         if (triangleElem) triangleElem.remove();
                         checkWin();
-                    } else {
+                    }} else {{
                         playSound('error');
                         showErrorToast();
-                    }
-                });
+                    }}
+                }});
                 squaresContainer.appendChild(square);
-            }
-        }
+            }}
+        }}
 
-        function buildTriangles() {
+        function buildTriangles() {{
             trianglesContainer.innerHTML = '';
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < count; i++) {{
                 if (triangleUsed[i]) continue;
                 const triangle = document.createElement('div');
-                triangle.id = `triangle-${i}`;
+                triangle.id = `triangle-${{i}}`;
                 triangle.className = 'triangle';
                 triangle.setAttribute('draggable', 'true');
                 triangle.setAttribute('data-triangle-id', i);
-                triangle.innerHTML = `🔺<span>${i+1}</span>`;
-                triangle.addEventListener('dragstart', (e) => {
-                    if (triangleUsed[i]) {
+                triangle.innerHTML = `🔺<span>${{i+1}}</span>`;
+                triangle.addEventListener('dragstart', (e) => {{
+                    if (triangleUsed[i]) {{
                         e.preventDefault();
                         return false;
-                    }
+                    }}
                     e.dataTransfer.setData('text/plain', i);
                     e.dataTransfer.effectAllowed = 'move';
                     e.target.classList.add('dragging');
-                });
-                triangle.addEventListener('dragend', (e) => {
+                }});
+                triangle.addEventListener('dragend', (e) => {{
                     e.target.classList.remove('dragging');
-                });
+                }});
                 trianglesContainer.appendChild(triangle);
-            }
-        }
+            }}
+        }}
 
-        function resetGame() {
+        function resetGame() {{
             squareHiddenNumbers = initHiddenNumbers();
             squareFilled.fill(false);
             triangleUsed.fill(false);
-            remaining = 20;
+            remaining = count;
             updateRemaining();
             winDiv.style.display = 'none';
             const squares = document.querySelectorAll('.square');
-            squares.forEach((sq) => {
+            squares.forEach((sq) => {{
                 sq.classList.remove('correct');
                 sq.querySelector('.triangle-placed').innerHTML = '';
-            });
+            }});
             buildTriangles();
-        }
+        }}
 
         squareHiddenNumbers = initHiddenNumbers();
         buildSquares();
@@ -573,14 +591,14 @@ def drag_drop_game():
     </body>
     </html>
     """
-    components.html(game_html, height=800, scrolling=False)
+    components.html(game_html, height=700, scrolling=False)
 
 # ---------- MAIN APP ----------
 def main_app():
-    show_sidebar()
-    st.markdown("<h1 style='text-align:center;'>🔺 Shuffled Hidden Match Puzzle 🔲</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>Each time you reset, the hidden numbers (1‑20) are randomly assigned to the squares. Your goal: drag each triangle to the square that hides its matching number. Wrong placement = error sound; correct = success and the triangle stays in that square. Remember the positions! Fit all 20 to win with balloons, stars, and a victory chime.</p>", unsafe_allow_html=True)
-    drag_drop_game()
+    level = show_sidebar()
+    st.markdown("<h1 style='text-align:center;'>🔺 Triangle Memory Puzzle – Multi‑Level 🔲</h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center;'>Current level: <strong>{level}</strong>. Select difficulty from sidebar.</p>", unsafe_allow_html=True)
+    drag_drop_game(level)
     st.markdown('<div class="footer">© GlobalInternet.py – Train your brain, one puzzle at a time.</div>', unsafe_allow_html=True)
 
 # ---------- ROUTING ----------
