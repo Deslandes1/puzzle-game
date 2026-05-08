@@ -22,6 +22,13 @@ st.markdown("""
     [data-testid="stSidebar"] .stCaption {
         color: #ffffff !important;
     }
+    /* Force sidebar selectbox text to white */
+    [data-testid="stSidebar"] .stSelectbox label,
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span,
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div {
+        color: white !important;
+        background-color: #0f3460 !important;
+    }
     .stButton button {
         background-color: #e94560 !important;
         color: white !important;
