@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- CUSTOM CSS (ensures white text) ----------
+# ---------- CUSTOM CSS ----------
 st.markdown("""
 <style>
     .stApp {
@@ -61,7 +61,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- SPINNING GLOBE SIDEBAR ----------
+# ---------- SPINNING GLOBE ----------
 def spinning_globe():
     st.sidebar.markdown("""
     <div style="text-align: center;">
@@ -120,7 +120,7 @@ def show_sidebar():
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
 
-# ---------- DRAG-AND-DROP MEMORY PUZZLE (with golden names win celebration) ----------
+# ---------- DRAG-AND-DROP MEMORY PUZZLE (with TikTok flying words) ----------
 def drag_drop_game():
     game_html = """
     <!DOCTYPE html>
@@ -374,7 +374,6 @@ def drag_drop_game():
             return shuffleArray(arr);
         }
 
-        // New win celebration: balloons + golden names floating up
         function createBalloonsAndStars() {
             const container = document.createElement('div');
             container.style.position = 'fixed';
@@ -386,7 +385,7 @@ def drag_drop_game():
             container.style.zIndex = '10000';
             document.body.appendChild(container);
 
-            // Balloons
+            // Balloons (120)
             for (let i = 0; i < 120; i++) {
                 const balloon = document.createElement('div');
                 balloon.style.position = 'absolute';
@@ -403,7 +402,7 @@ def drag_drop_game():
                 container.appendChild(balloon);
             }
 
-            // Golden names flying with balloons
+            // Golden names
             const names = [
                 "Gesner Junior Deslandes",
                 "Roosevelt Deslandes",
@@ -415,10 +414,10 @@ def drag_drop_game():
                 nameDiv.textContent = name;
                 nameDiv.style.position = 'absolute';
                 nameDiv.style.bottom = '-30px';
-                nameDiv.style.left = Math.random() * 80 + 10 + '%'; // random horizontal position
+                nameDiv.style.left = Math.random() * 80 + 10 + '%';
                 nameDiv.style.fontSize = '1.5rem';
                 nameDiv.style.fontWeight = 'bold';
-                nameDiv.style.color = '#FFD700'; // golden
+                nameDiv.style.color = '#FFD700';
                 nameDiv.style.textShadow = '0 0 5px #ffaa33, 0 0 10px #ff8800';
                 nameDiv.style.fontFamily = 'Arial, sans-serif';
                 nameDiv.style.whiteSpace = 'nowrap';
@@ -427,7 +426,25 @@ def drag_drop_game():
                 container.appendChild(nameDiv);
             });
 
-            // Star particles (small golden dots)
+            // Four TikTok words (flying separately)
+            for (let i = 0; i < 4; i++) {
+                const tiktokDiv = document.createElement('div');
+                tiktokDiv.textContent = 'TikTok';
+                tiktokDiv.style.position = 'absolute';
+                tiktokDiv.style.bottom = '-40px';
+                tiktokDiv.style.left = Math.random() * 90 + 5 + '%';
+                tiktokDiv.style.fontSize = '2rem';
+                tiktokDiv.style.fontWeight = 'bold';
+                tiktokDiv.style.color = '#ffffff';
+                tiktokDiv.style.textShadow = '0 0 8px #00d4ff, 0 0 12px #ffaa33';
+                tiktokDiv.style.fontFamily = 'Arial Black, sans-serif';
+                tiktokDiv.style.whiteSpace = 'nowrap';
+                tiktokDiv.style.animation = `floatTikTok ${4 + Math.random() * 3}s linear forwards`;
+                tiktokDiv.style.zIndex = '10002';
+                container.appendChild(tiktokDiv);
+            }
+
+            // Star particles
             for (let i = 0; i < 150; i++) {
                 const star = document.createElement('div');
                 star.style.position = 'absolute';
@@ -451,6 +468,10 @@ def drag_drop_game():
                 @keyframes floatName {
                     0% { transform: translateY(0) rotate(0deg); opacity: 1; }
                     100% { transform: translateY(-110vh) rotate(10deg); opacity: 0; }
+                }
+                @keyframes floatTikTok {
+                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+                    100% { transform: translateY(-130vh) rotate(15deg); opacity: 0; }
                 }
             `;
             document.head.appendChild(style);
