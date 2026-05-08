@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- CUSTOM CSS (stronger selectbox readability) ----------
+# ---------- CUSTOM CSS (dark, readable selectbox) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -22,19 +22,25 @@ st.markdown("""
     [data-testid="stSidebar"] .stCaption {
         color: #ffffff !important;
     }
-    /* Force sidebar selectbox text to white */
+    /* Make selectbox background dark and text white */
     [data-testid="stSidebar"] .stSelectbox label {
         color: white !important;
     }
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
+        background-color: #0f3460 !important;
+        border-color: #e94560 !important;
+    }
     [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] span {
         color: white !important;
-        background-color: #0f3460 !important;
     }
     [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div {
+        background-color: #0f3460 !important;
         color: white !important;
+    }
+    /* Dropdown menu */
+    div[data-baseweb="select"] ul {
         background-color: #0f3460 !important;
     }
-    /* Dropdown menu items */
     div[data-baseweb="select"] ul li {
         color: white !important;
         background-color: #0f3460 !important;
@@ -137,7 +143,7 @@ def show_sidebar():
     | **Single‑User** | $5 |
     | **Source Code** | $49 |
     """)
-    # Level selection – the text will now be white
+    # Level selection – now fully readable on dark background
     level = st.sidebar.selectbox("🎮 Choose Difficulty Level", ["Level 1 (10x10)", "Level 2 (20x20)", "Level 3 (100x100)"])
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
