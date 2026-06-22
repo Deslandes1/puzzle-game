@@ -1,5 +1,13 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import io
+import os
+
+# Text-to-Speech (gTTS)
+try:
+    from gtts import gTTS
+except ImportError:
+    gTTS = None
 
 st.set_page_config(
     page_title="Triangle Memory Puzzle | GlobalInternet.py",
@@ -22,7 +30,6 @@ st.markdown("""
     [data-testid="stSidebar"] .stCaption {
         color: #ffffff !important;
     }
-    /* Make selectbox background dark and text white */
     [data-testid="stSidebar"] .stSelectbox label {
         color: white !important;
     }
@@ -37,7 +44,6 @@ st.markdown("""
         background-color: #0f3460 !important;
         color: white !important;
     }
-    /* Dropdown menu */
     div[data-baseweb="select"] ul {
         background-color: #0f3460 !important;
     }
@@ -87,6 +93,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ---------- APP DESCRIPTION FOR TEXT-TO-SPEECH ----------
+APP_DESCRIPTION = """
+Welcome to the Triangle Memory Puzzle, an interactive brain training game designed to boost your memory and cognitive skills.
+
+This game is perfect for both adults and kids who want to improve their memory through fun and engaging exercises. The goal is simple: each square hides a random number, and you must drag the triangle with the matching number to the correct square. By remembering where each number is hidden, you train your brain to retain and recall information more effectively.
+
+Playing this game regularly helps develop better learning habits, improves concentration, and enhances overall memory retention. Whether you are a student preparing for exams, a professional looking to sharpen your mind, or a parent wanting to help your children develop cognitive skills, this game is for you.
+
+The Triangle Memory Puzzle offers three difficulty levels: Level 1 with 10 squares, Level 2 with 20 squares, and Level 3 with 100 squares for the ultimate challenge. Each level tests your memory and attention in different ways.
+
+This app was created by Gesner Deslandes, Engineer in Chief at GlobalInternet.py. We believe in using technology to educate and empower. We are based in Haiti and we build tailor-made software solutions connecting the global market with our local expertise.
+
+We are proud to say: We are the best! Enjoy the game and train your brain every day.
+"""
+
 # ---------- SPINNING GLOBE ----------
 def spinning_globe():
     st.sidebar.markdown("""
@@ -97,6 +118,20 @@ def spinning_globe():
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
     """, unsafe_allow_html=True)
+
+# ---------- AI VOICE FUNCTION ----------
+def text_to_speech(text, lang="en"):
+    if not gTTS:
+        return None
+    try:
+        tts = gTTS(text=text, lang=lang, slow=False)
+        audio_bytes = io.BytesIO()
+        tts.write_to_fp(audio_bytes)
+        audio_bytes.seek(0)
+        return audio_bytes
+    except Exception as e:
+        st.error(f"Error generating speech: {e}")
+        return None
 
 # ---------- LOGIN / LOGOUT ----------
 if "authenticated" not in st.session_state:
@@ -143,8 +178,44 @@ def show_sidebar():
     | **Single‑User** | $5 |
     | **Source Code** | $49 |
     """)
-    # Level selection – now fully readable on dark background
+    
+    # Level selection
     level = st.sidebar.selectbox("🎮 Choose Difficulty Level", ["Level 1 (10x10)", "Level 2 (20x20)", "Level 3 (100x100)"])
+    
+    st.sidebar.markdown("---")
+    
+    # ---------- AI VOICE SECTION ----------
+    st.sidebar.markdown("### 🎤 AI Voice")
+    voice_lang = st.sidebar.selectbox(
+        "Voice Language",
+        ["English", "Español", "Français", "Kreyòl Ayisyen"],
+        index=0
+    )
+    lang_map = {"English": "en", "Español": "es", "Français": "fr", "Kreyòl Ayisyen": "ht"}
+    voice_code = lang_map[voice_lang]
+    
+    if st.sidebar.button("📢 Describe this app", use_container_width=True):
+        audio = text_to_speech(APP_DESCRIPTION, voice_code)
+        if audio:
+            st.sidebar.audio(audio, format="audio/mp3")
+            st.sidebar.success("🔊 Speaking...")
+        else:
+            st.sidebar.error("gTTS not installed. Please run: pip install gTTS")
+    
+    custom_text = st.sidebar.text_area("Text to speak", height=80, value="This memory puzzle game helps adults and kids improve their memory and learning skills.")
+    if st.sidebar.button("🔊 Speak Text", use_container_width=True):
+        if custom_text.strip():
+            audio = text_to_speech(custom_text, voice_code)
+            if audio:
+                st.sidebar.audio(audio, format="audio/mp3")
+                st.sidebar.success("🔊 Speaking...")
+            else:
+                st.sidebar.error("gTTS not installed.")
+        else:
+            st.sidebar.warning("Please enter some text to speak.")
+    
+    st.sidebar.markdown("---")
+    
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
     return level
